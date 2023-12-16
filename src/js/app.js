@@ -1,31 +1,27 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { VertexNormalsHelper } from 'three/examples/jsm/helpers/VertexNormalsHelper.js';
-import vertexShader from '../shaders/earth/vertex.glsl?raw';
-import fragmentShader from '../shaders/earth/fragment.glsl?raw';
-import pointsVertexShader from '../shaders/earthPoints/vertex.glsl?raw';
-import pointsFragmentShader from '../shaders/earthPoints/fragment.glsl?raw';
-import glowVertexShader from '../shaders/earthGlow/vertex.glsl?raw';
-import glowFragmentShader from '../shaders/earthGlow/fragment.glsl?raw';
-import CameraControls from '../Controls/CameraControls';
-import Animation from '../Controls/Animation';
 import GUI from 'lil-gui';
 import { gsap } from 'gsap';
 
 export default function () {
+  const body = document.querySelector('body');
+
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
   });
-  renderer.setClearColor(0x000000, 1);
 
   const container = document.querySelector('#container');
-
   container.appendChild(renderer.domElement);
 
   const canvasSize = {
     width: window.innerWidth,
     height: window.innerHeight,
   };
+
+
+  
+  let mouseY;
+  let object
 
   const clock = new THREE.Clock();
   const textureLoader = new THREE.TextureLoader();
@@ -37,158 +33,60 @@ export default function () {
     100
   );
 
-  /** BackGround 
-  const cubeTextureLoader = new THREE.CubeTextureLoader();
-  const environmentMap = cubeTextureLoader.load([
-   'assets/environment/px.png',
-   'assets/environment/nx.png',
-   'assets/environment/py.png',
-   'assets/environment/ny.png',
-   'assets/environment/pz.png',
-   'assets/environment/nz.png'
-  ])
-  environmentMap.encoding = THREE.sRGBEncoding;
-  scene.background = environmentMap;
-  scene.environment = environmentMap;
-*/
-
-  /** library */
-  //const gui = new GUI();
+  /** fog */
+  // scene.fog = new THREE.Fog('rgba(255,0,255,0.0001)', 1, 1);
   
-  /** animation */
-  let introStart = true;
-  const animation = new Animation(introStart,gsap);
-  
-  //introStart = animation.animationIntro();
+  /** light */
+  const pointLight = new THREE.PointLight('#00b3ff', 3.4)
+  pointLight.position.x = 2
+  pointLight.position.y = 3
+  pointLight.position.z = 4
+  scene.add(pointLight)
   
 
+ 
+  /** texture */
+  const texture = textureLoader.load('public/assets/mountin.avif')
+  const height = textureLoader.load('public/static/height.png')
+  const height2 = textureLoader.load('public/static/height2.png')
+  const height3 = textureLoader.load('public/static/height3.png')
+  const height4 = textureLoader.load('public/static/height4.png')
+  const height5 = textureLoader.load('public/static/height5.png')
+  const alpha = textureLoader.load('public/static/alpha2.png')
 
   /** Camera */
-  //camera.position.set(0, 0, 1.9);
-  camera.position.set(0, 0, 0.85);
-
+  camera.position.set(0.1, 0, 3.4);
+  
+  
   /** Controls */
-  const cameraControls = new CameraControls();
-  const orbitControls = () => {
-    const controls = new OrbitControls(camera, renderer.domElement);
-
-    return controls;
-  }
   
-  /** create Earth */
-  const createEarth = () => {
-    const material = new THREE.ShaderMaterial({
-      wireframe: false,
-      uniforms: {
-        uTexture: {
-          value: textureLoader.load('assets/earth-specular-map.png'),
-        },
-      },
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
-      side: THREE.DoubleSide,
+
+
+  /** createObject */
+  const creatObject = () =>{
+    const geometry = new THREE.PlaneBufferGeometry(3, 3, 64, 64)
+    const material = new THREE.MeshStandardMaterial({
+      color: 'gray',
+      map:texture,
+      displacementMap : height5,
+      displacementScale : .9,
+      alphaMap: alpha,
       transparent: true,
-    });
-
-    const geometry = new THREE.SphereGeometry(0.8, 30, 30);
-    const mesh = new THREE.Mesh(geometry, material);
-
-    return mesh;
-  };
-
-  /** create EarthPointe*/
-  const createEarthPoints = () => {
-    const material = new THREE.ShaderMaterial({
-      wireframe: true,
-      uniforms: {
-        uTexture: {
-          value: textureLoader.load('assets/earth-specular-map.png'),
-        },
-        uTime: {
-          value: 0,
-        },
-      },
-      vertexShader: pointsVertexShader,
-      fragmentShader: pointsFragmentShader,
-      side: THREE.DoubleSide,
-      transparent: true,
-      depthWrite: false,
-      depthTest: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const geometry = new THREE.IcosahedronGeometry(0.8, 30, 30);
-    geometry.rotateY(-Math.PI);
-
-    const mesh = new THREE.Points(geometry, material);
-
-    return mesh;
-  };
-
-  
-  /** create EarthGlow */
-  const createEarthGlow = () => {
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uZoom: {
-          value: 1,
-        },
-      },
-      vertexShader: glowVertexShader,
-      fragmentShader: glowFragmentShader,
-      side: THREE.BackSide,
-      transparent: true,
-    });
-
-    const geometry = new THREE.SphereGeometry(1, 40, 40);
-    const mesh = new THREE.Mesh(geometry, material);
-
-    return mesh;
-  };
-
-  /** create Galaxis */
-  const createGalaxis = () => {
-    const count  = 10000;
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++){
-      positions[i] = (Math.random() - 0.5) * 4;
-      positions[i + 1] = (Math.random() - 0.5) * 4;
-      positions[i + 2] = (Math.random() - 0.5) * 4; 
-    }
-    const starsGeometric = new THREE.BufferGeometry();
-    starsGeometric.setAttribute(
-      'position',
-      new THREE.BufferAttribute(positions, 3)
-    )
-    const starsMaterial = new THREE.PointsMaterial({
-      size : Math.random() * 0.007,
-      transparent : true,
-      depthWrite : false,
-      color: '#3f9f8e',
-      alphaMap : textureLoader.load('assets/particle.png'),
-      map: textureLoader.load('assets/particle.png'),
+      depthTest :false,
     })
-    const star = new THREE.Points(starsGeometric, starsMaterial);
-
-    return star
-  }  
-
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.rotation.x = 181
+    // mesh.rotation.y = 0.15
+    object = mesh;
+    return mesh;
+  }
 
   /** create */
   const create = () => {
-    const earth = createEarth();
-    const earthPoints = createEarthPoints();
-    const earthGlow = createEarthGlow();
-    const stars = createGalaxis()
-    // const glowNormalHelper = new VertexNormalsHelper(earthGlow, 0.1);
-
-    scene.add(earth, earthPoints, earthGlow, stars);
-
+    const mesh = creatObject()
+    scene.add(mesh);
     return {
-      earth,
-      earthPoints,
-      earthGlow,
-      stars
+      mesh
     };
   };
 
@@ -201,54 +99,43 @@ export default function () {
 
     renderer.setSize(canvasSize.width, canvasSize.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    if(window.innerWidth <= 576){
+        object.position.x = -.2
+        object.position.y = -.3
+    }else if(window.innerWidth >= 577){
+      
+      object.position.x = .7
+      object.position.y = 0
+    } 
+    body.style.fontSize = window.innerWidth / 1920 + 'px'
+
   };
 
-  let lastScrollY = 0;
-  let entered = false;
+
+
   const addEvent = () => {
     window.addEventListener('resize', resize);
     window.addEventListener("scroll", () => {
-      lastScrollY = animation.scrollAnimation(window.scrollY,lastScrollY);
-      animation.enterToContent(camera);
     });
-    window.addEventListener('mousedown', (e) => {
-      console.log('d '+e.clientX)
-      console.log('d ' +e.clientY)
+    window.addEventListener('mousemove', (e) => {
+      mouseY = e.clientY;
     })
-    window.addEventListener('mouseup', (e) => {
-      console.log('u '+e.clientX)
-      console.log('u '+e.clientY)
-    })
-  
   };
   
 
 
-  const draw = (obj, orbitControl) => {
-    const { earth, earthPoints, earthGlow, stars} = obj;
-    // earth.rotation.x += 0.0005;
-    earth.rotation.y += 0.0005;
-    earth.rotation.x = 0.3;
-    // earthPoints.rotation.x += 0.0005;
-    earthPoints.rotation.y += 0.0005;
-    earthPoints.rotation.x = 0.3;
-    // stars.rotation.x += 0.0007;
-     stars.rotation.y += 0.0007;
+  const draw = (obj) => {
+    const { mesh } = obj;
+    const time = clock.getElapsedTime();
+    mesh.rotation.z = .3 * time
+    
+    mesh.material.displacementScale = mouseY * 0.0007 + 0.5
 
-
-
-
-    orbitControl.update();
     renderer.render(scene, camera);
-    // console.log(orbitControl.getDistance)
-    earthGlow.material.uniforms.uZoom.value = orbitControl.target.distanceTo(
-      orbitControl.object.position
-    );
-
-    earthPoints.material.uniforms.uTime.value = clock.getElapsedTime();
 
     requestAnimationFrame(() => {
-      draw(obj, orbitControl);
+      draw(obj);
     });
   };
 
@@ -257,10 +144,9 @@ export default function () {
 
   const initialize = () => {
     const obj = create();
-    const orbitControl = orbitControls()
     addEvent();
     resize();
-    draw(obj, orbitControl);
+    draw(obj);
   };
 
   initialize();
